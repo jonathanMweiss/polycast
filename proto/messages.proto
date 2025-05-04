@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+package polycast;
+
+option go_package = "project/polycast";
+
+import "proto/any.proto";
+
+
+message Wireable{
+    // using protobuf so this message, once sent can be marshalled easily.
+	google.protobuf.Any content = 1;
+    bytes MessageID = 2; 
+
+	// used to tell the sender where to send.
+    // doesn't need to be sent online.
+    WireMeta Meta = 3;
+}
+
+message WireMeta {
+    bool isBroadcast  = 1; // indicates if this message is a broadcast message.
+	int32 Sender      = 2;
+	int32 Destination = 3;  // indicates which peer should receive this message.
+}
+
+message Polynomial{
+    repeated uint64 coeffs = 1;
+}
+
+message Round1Message {
+    // Each polynomial here is of degree f+1, 
+    // not encoded, that is: pure data 
+    // represented as []uint64 instead of bytes.
+    repeated Polynomial rnsPolynomials = 1;
+}
+
+// used for inspection of the polynomial by each player.
+message Round2Message {
+    Challenge challenge = 1;
+}
+
+message RNSPoint{
+    repeated uint64 v = 2; // the value of the polynomial at a specific x.
+}
+
+// used by the playeres to tell others CHEAPLY what they received from the dealer.
+message Challenge{
+    RNSPoint randomX =1;
+    RNSPoint PolynomialValueOfRandomX = 2;
+}
+
+// this message is used by players that hadn't received the polynomial from the dealer.
+// It will help them reconstruct the polynomial.
+message Round3Message1 {
+    RNSPoint suggestedValue = 1; // indicates that this player is suggesting this value for another peer's P(i)
+    RNSPoint MyValue = 2; // States what the sender's value is.
+}
+
+// This is a message that arrives eventually from a player that hadn't received the original 
+// polynomial from the dealer, and managed to catch up with the rest of the players (due to f+1) 
+// suggested valued received in Round3Message1.
+message Round3DelayedMessage{
+    RNSPoint MyValue = 1;
+}
