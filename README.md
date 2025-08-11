@@ -19,4 +19,4 @@ This implementation is designed for educational and experimental purposes, provi
 
 
 # Reporting security problems
-This library is offered as-is, and without a guarantee. It will need an independent security review before it should be considered ready for use in security-critical applications. If you integrate Kyber into your application it is YOUR RESPONSIBILITY to arrange for that audit.
+This library is offered as-is, and without a guarantee. It will need an independent security review before it should be considered ready for use in security-critical applications. If you integrate polycast into your application it is YOUR RESPONSIBILITY to arrange for that audit.
