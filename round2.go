@@ -66,7 +66,7 @@ func (p *Player) checkReceivedChallenges(state *relbroadState) {
 	numAccepted := 0
 
 	for i := range phase.indexChallenge {
-		if phase.inspectChallenge(polys, i) {
+		if phase.inspectChallenge(p.Rings, polys, i) {
 			numAccepted++
 		}
 	}
@@ -80,7 +80,7 @@ func (p *Player) checkReceivedChallenges(state *relbroadState) {
 	state.inspectionStage.isAccepted = true
 }
 
-func (i *inspectionStageData) inspectChallenge(polys []*field.Polynomial, playerIndex int) bool {
+func (i *inspectionStageData) inspectChallenge(rings []*field.PolyRing, polys []*field.Polynomial, playerIndex int) bool {
 	challengeResult, ok := i.challengeState[playerIndex]
 	if ok {
 		return challengeResult // already accepted.
@@ -95,9 +95,9 @@ func (i *inspectionStageData) inspectChallenge(polys []*field.Polynomial, player
 	challengeY := ch.PolynomialValueOfRandomX
 
 	for j, p := range polys {
-		y := p.Eval(x.V[j])
+		y := rings[j].Evaluate(p, x.V[j])
 
-		if y.Value() != challengeY.V[j] {
+		if y != challengeY.V[j] {
 			// not accepted. won't be checked again.
 			i.challengeState[playerIndex] = false
 

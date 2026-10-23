@@ -46,14 +46,12 @@ func (p *Player) receiveRound1Message(m *Round1Message, wm *WireMeta, ID ID) (*r
 		}
 
 		// create challenge
-		for rnsLevel, code := range p.Codes {
-			fld := code.PrimeField()
-
-			x := rand.Uint64() % fld.Prime()
-			y := polys[rnsLevel].Eval(x)
+		for rnsLevel, ring := range p.Rings {
+			x := rand.Uint64() % ring.GetField().Modulus()
+			y := ring.Evaluate(polys[rnsLevel], x)
 
 			msg.Challenge.RandomX.V[rnsLevel] = x
-			msg.Challenge.PolynomialValueOfRandomX.V[rnsLevel] = y.Value()
+			msg.Challenge.PolynomialValueOfRandomX.V[rnsLevel] = y
 		}
 
 		challenges[peerID.CommunicationIndex] = ToWire(msg, ID, &WireMeta{

@@ -43,8 +43,9 @@ type Identity struct {
 type Player struct {
 	Parameters
 	// Galois fields for each prime value.
-	Codes []*gao.Code // code for each field.
-	Q     *big.Int    // Maximal value per incoming data coefficient.
+	Codes []*gao.Code       // code for each field.
+	Rings []*field.PolyRing // polynomial ring for each field.
+	Q     *big.Int          // Maximal value per incoming data coefficient.
 
 	Peers []Identity     // list of all peers
 	send  chan *Wireable // used by the Player to receive network access and send things to peers.
@@ -162,6 +163,7 @@ func NewPlayer(prms Parameters, peers []Identity, sendChan chan *Wireable) (*Pla
 	Q := big.NewInt(1)
 
 	codes := make([]*gao.Code, len(prms.Qs))
+	rings := make([]*field.PolyRing, len(prms.Qs))
 	qis := make([]*big.Int, len(prms.Qs))
 
 	for i, qi := range prms.Qs {
@@ -170,8 +172,12 @@ func NewPlayer(prms Parameters, peers []Identity, sendChan chan *Wireable) (*Pla
 			return nil, err
 		}
 
-		coderParams, _ := gao.NewCodeParameters(gao.NewSlowEvaluator(f), prms.N, prms.F+1)
-		codes[i] = gao.NewCodeGao(coderParams)
+		codes[i], err = gao.NewCode(f, prms.N, prms.F+1, gao.Pointwise())
+		if err != nil {
+			return nil, err
+		}
+
+		rings[i] = field.NewPolyRing(f)
 
 		qis[i] = new(big.Int).SetUint64(qi)
 		Q.Mul(Q, qis[i])
@@ -182,6 +188,7 @@ func NewPlayer(prms Parameters, peers []Identity, sendChan chan *Wireable) (*Pla
 	p := &Player{
 		Parameters: prms,
 		Codes:      codes,
+		Rings:      rings,
 		Q:          Q,
 		Peers:      peers,
 		send:       sendChan,

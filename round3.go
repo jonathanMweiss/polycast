@@ -4,6 +4,7 @@ import (
 	"crypto/sha512"
 	"log/slog"
 
+	"github.com/jonathanmweiss/go-gao"
 	"github.com/jonathanmweiss/go-gao/field"
 	"google.golang.org/protobuf/proto"
 )
@@ -168,11 +169,8 @@ func (p *Player) makeEvaluations(polys []*field.Polynomial) ([]*Round3Message1, 
 		}
 	}
 
-	// xs represents the x values for which the polynomial is evaluated.
-	// each peer receive one specific x value (according to its peer index).
-	xs := make([][]uint64, len(p.Codes))
-
-	evaluatedPolynomials := make([]map[uint64]uint64, len(p.Codes))
+	// codewords are positional: each peer receives the evaluation at its peer index.
+	evaluatedPolynomials := make([]gao.Codeword, len(p.Codes))
 	// for each poly, create an evaluation for all peers.
 	for rnsLevel, code := range p.Codes {
 		evalOverSpecificRNSValue, err := code.Encode(polys[rnsLevel].ToSlice())
@@ -181,8 +179,6 @@ func (p *Player) makeEvaluations(polys []*field.Polynomial) ([]*Round3Message1, 
 		}
 
 		evaluatedPolynomials[rnsLevel] = evalOverSpecificRNSValue
-
-		xs[rnsLevel] = code.EvaluationPoints(code.N())
 	}
 
 	m := 0
@@ -195,8 +191,7 @@ func (p *Player) makeEvaluations(polys []*field.Polynomial) ([]*Round3Message1, 
 		}
 
 		for rnsLevel := range p.Codes {
-			rnsX := xs[rnsLevel][peerPos]
-			msgs[m].SuggestedValue.V[rnsLevel] = evaluatedPolynomials[rnsLevel][rnsX]
+			msgs[m].SuggestedValue.V[rnsLevel] = evaluatedPolynomials[rnsLevel][peerPos]
 		}
 
 		m++
@@ -205,8 +200,7 @@ func (p *Player) makeEvaluations(polys []*field.Polynomial) ([]*Round3Message1, 
 	myValue := &RNSPoint{V: make([]uint64, len(p.Codes))}
 	// now add my value to the message.
 	for rnsLevel := range p.Codes {
-		x := xs[rnsLevel][p.Self.CommunicationIndex]
-		myValue.V[rnsLevel] = evaluatedPolynomials[rnsLevel][x]
+		myValue.V[rnsLevel] = evaluatedPolynomials[rnsLevel][p.Self.CommunicationIndex]
 	}
 
 	// now add my value to the messages.

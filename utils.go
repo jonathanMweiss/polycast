@@ -8,10 +8,10 @@ import (
 
 func (p *Player) toFieldPoly(polynomial []*Polynomial) []*field.Polynomial {
 	fieldPolys := make([]*field.Polynomial, len(p.Codes))
-	for i, code := range p.Codes {
-		fld := code.PrimeField()
-		elems := fld.ElemSlice(polynomial[i].Coeffs)
-		fieldPolys[i] = field.NewPolynomial(elems, false)
+	for i, ring := range p.Rings {
+		// NewPolynomial reduces its input in place, so don't hand it the message's slice.
+		coeffs := append([]uint64(nil), polynomial[i].Coeffs...)
+		fieldPolys[i] = ring.NewPolynomial(coeffs, false)
 	}
 
 	return fieldPolys
