@@ -3,6 +3,7 @@ package polycast
 import (
 	"log/slog"
 
+	"github.com/jonathanmweiss/go-gao"
 	"github.com/jonathanmweiss/go-gao/field"
 )
 
@@ -24,32 +25,40 @@ func (p *Player) attemptReconstruction(state *relbroadState) {
 		slog.Int("player", int(p.Self.CommunicationIndex)),
 	)
 
-	// grab each value and put in a map, any missing value: put 0.
-	// then use go's reconstruction for each polynomial.
+	// grab each value, and declare any missing value as an erasure.
+	// then use gao's reconstruction for each polynomial.
 	// on failure: return nil, and keep on waiting.
 	vals := state.acceptanceStage.valueOfPeer
 	polys := make([]*field.Polynomial, len(p.Codes))
 
-	for rnsLevel, code := range p.Codes {
-		indexToValue := make(map[uint64]uint64)
+	var missing []int
 
-		xs := code.EvaluationPoints(code.N())
-
-		for i := 0; i < p.Parameters.N; i++ {
-			rnsVal := uint64(0)
-			if v, ok := vals[i]; ok {
-				rnsVal = v.V[rnsLevel]
-			}
-
-			indexToValue[uint64(xs[i])] = rnsVal
+	for i := 0; i < p.Parameters.N; i++ {
+		if _, ok := vals[i]; !ok {
+			missing = append(missing, i)
 		}
+	}
 
-		data, err := code.Decode(indexToValue)
+	for rnsLevel, code := range p.Codes {
+		erasures, err := code.Erasures(missing...)
 		if err != nil {
 			return
 		}
 
-		polys[rnsLevel] = field.NewPolynomial(code.PrimeField().ElemSlice(data), false)
+		codeword := make(gao.Codeword, p.Parameters.N)
+
+		for i := range codeword {
+			if v, ok := vals[i]; ok {
+				codeword[i] = v.V[rnsLevel]
+			}
+		}
+
+		data, err := code.Decode(codeword, erasures)
+		if err != nil {
+			return
+		}
+
+		polys[rnsLevel] = p.Rings[rnsLevel].NewPolynomial(data, false)
 	}
 
 	slog.Debug("reconstructed polynomials!",
